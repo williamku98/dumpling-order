@@ -12,7 +12,6 @@
             display: flex;
             height: 100vh;
         }
-        /* 載入中遮罩 */
         #loadingOverlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -26,7 +25,6 @@
             font-weight: bold;
             color: #2c3e50;
         }
-        /* 登入遮罩畫面 */
         #loginOverlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -72,7 +70,6 @@
             background-color: #2980b9;
         }
 
-        /* 側邊導覽列 */
         .sidebar {
             width: 250px;
             background-color: #2c3e50;
@@ -115,7 +112,6 @@
             background-color: #e74c3c;
         }
 
-        /* 主內容區 */
         .main-content {
             flex: 1;
             padding: 30px;
@@ -151,6 +147,7 @@
             cursor: pointer;
             font-weight: bold;
             font-size: 14px;
+            margin-bottom: 3px;
         }
         .btn-primary { background-color: #3498db; color: white; }
         .btn-primary:hover { background-color: #2980b9; }
@@ -158,15 +155,43 @@
         .btn-success:hover { background-color: #27ae60; }
         .btn-danger { background-color: #e74c3c; color: white; }
         .btn-danger:hover { background-color: #c0392b; }
+        .btn-secondary { background-color: #95a5a6; color: white; }
+        .btn-secondary:hover { background-color: #7f8c8d; }
+        .btn-warning { background-color: #e67e22; color: white; }
+        .btn-warning:hover { background-color: #d35400; }
 
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], input[type="date"] {
             padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 14px;
         }
 
-        /* RWD 手機版調整 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: #fdfbf7;
+            border: 1px solid #e0dcd3;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-box h3 {
+            margin: 0 0 10px 0;
+            color: #7f8c8d;
+            font-size: 15px;
+        }
+        .stat-box .number {
+            font-size: 26px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 0;
+        }
+
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -212,12 +237,13 @@
         <div id="loadingText">處理中，請稍候...</div>
     </div>
 
-    <!-- 側邊選單 (預設隱藏，登入後顯示) -->
+    <!-- 側邊選單 -->
     <div class="sidebar" id="sidebarNav" style="display: none;">
         <h2>水餃管理後台</h2>
         <div class="nav-links">
             <a id="navOrders" class="active" onclick="switchAdminTab('orders')">📦 訂單管理</a>
             <a id="navMenu" onclick="switchAdminTab('menu')">🥟 品項維護</a>
+            <a id="navStats" onclick="switchAdminTab('stats')">📊 統計分析</a>
         </div>
         <a class="logout-btn" onclick="handleLogout()">登出</a>
     </div>
@@ -228,7 +254,7 @@
         <!-- 區塊 1: 訂單管理 -->
         <div class="card" id="ordersTab">
             <h2>📦 客戶訂單管理</h2>
-            <p style="color: #7f8c8d; font-size: 14px;">💡 可在此檢視所有訂單、針對公司團購或宅配手動修改運費/總金額，以及批次更新出貨狀態。</p>
+            <p style="color: #7f8c8d; font-size: 14px;">💡 可在此檢視訂單、調整運費、列印出貨單（包含品項、數量、單價、小計），以及批次更新出貨狀態。</p>
             <div style="margin-bottom: 15px;">
                 <button class="btn btn-success" onclick="batchShipOrders()">☑️ 將勾選的訂單設為「已出貨」</button>
                 <button class="btn btn-primary" onclick="loadOrdersData()" style="margin-left: 10px;">🔄 重新整理訂單</button>
@@ -241,14 +267,14 @@
                             <th>訂單編號/時間</th>
                             <th>訂購人/電話/地址</th>
                             <th>訂購內容明細</th>
-                            <th>總金額 (TWD)</th>
+                            <th>商品小計</th>
+                            <th>運費金額</th>
+                            <th>總金額 (含運)</th>
                             <th>狀態</th>
                             <th>操作</th>
                         </tr>
                     </thead>
-                    <tbody id="ordersTableBody">
-                        <!-- 動態載入 -->
-                    </tbody>
+                    <tbody id="ordersTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -269,10 +295,77 @@
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="menuTableBody">
-                    <!-- 動態載入 -->
+                <tbody id="menuTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- 區塊 3: 統計分析 -->
+        <div class="card" id="statsTab" style="display: none;">
+            <h2>📊 銷售與品項統計分析</h2>
+            <p style="color: #7f8c8d; font-size: 14px;">💡 可依日期區間快速統計銷售總額、各品項銷售數量及逐筆訂單明細。</p>
+            
+            <div style="background: #fdfbf7; border: 1px solid #e0dcd3; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <b>快速篩選：</b>
+                    <button class="btn btn-secondary" onclick="setDateRange('thisWeek')">本週</button>
+                    <button class="btn btn-secondary" onclick="setDateRange('thisMonth')">本月</button>
+                    <button class="btn btn-secondary" onclick="setDateRange('last3Months')">三個月內</button>
+                    <button class="btn btn-secondary" onclick="setDateRange('all')">全部歷史</button>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                    <div>
+                        <label for="startDate" style="font-weight: bold; font-size: 14px;">開始日期：</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div>
+                        <label for="endDate" style="font-weight: bold; font-size: 14px;">結束日期：</label>
+                        <input type="date" id="endDate">
+                    </div>
+                    <button class="btn btn-primary" onclick="calculateStats()">🔍 開始統計</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <h3>💰 區間銷售總額 (含運)</h3>
+                    <p class="number" id="statTotalRevenue">$0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>📦 總成交訂單數</h3>
+                    <p class="number" id="statTotalOrders">0 筆</p>
+                </div>
+            </div>
+
+            <h3>🥟 各品項銷售數量統計</h3>
+            <table id="itemStatsTable">
+                <thead>
+                    <tr>
+                        <th>品項名稱</th>
+                        <th>銷售總數量 (盒 / 份)</th>
+                    </tr>
+                </thead>
+                <tbody id="itemStatsTableBody">
+                    <tr><td colspan="2" style="text-align:center; color:#7f8c8d;">請點選上方開始統計</td></tr>
                 </tbody>
             </table>
+
+            <h3 style="margin-top: 30px;">📋 區間逐筆訂單明細</h3>
+            <div style="overflow-x: auto;">
+                <table id="statsOrdersTable">
+                    <thead>
+                        <tr>
+                            <th>訂單編號/時間</th>
+                            <th>訂購人/電話</th>
+                            <th>訂購內容明細</th>
+                            <th>總金額</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsOrdersTableBody">
+                        <tr><td colspan="5" style="text-align:center; color:#7f8c8d;">尚無資料</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     </div>
@@ -280,6 +373,7 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxmGo-q5ar3XtL3jujB9Qb1SAI7KipRctu_xBloQt0jy2lt-Kus4VvceKtLwleYS4am/exec";
         let cachedOrders = [];
+        let cachedMenuMap = {}; // 記錄品項單價對照表，供出貨單計算單價用
 
         function toggleLoading(show, text="處理中...") {
             const overlay = document.getElementById('loadingOverlay');
@@ -290,7 +384,6 @@
             }
         }
 
-        // 登入驗證 (呼叫後端安全比對)
         async function handleLogin(e) {
             e.preventDefault();
             const pwd = document.getElementById('adminPasswordInput').value.trim();
@@ -303,14 +396,14 @@
                 let json = await res.json();
                 
                 if (json && json.success) {
-                    // 驗證成功，隱藏登入框，顯示後台
                     document.getElementById('loginOverlay').style.display = 'none';
                     document.getElementById('sidebarNav').style.display = 'flex';
                     document.getElementById('mainContentArea').style.display = 'block';
                     
-                    // 載入後台資料
-                    loadOrdersData();
-                    loadMenuData();
+                    await loadMenuData(); // 先載入菜單建立單價對照表
+                    loadOrdersData().then(() => {
+                        setDateRange('thisMonth');
+                    });
                 } else {
                     errDiv.innerText = "❌ 密碼錯誤，請重新輸入！";
                 }
@@ -327,26 +420,62 @@
             document.getElementById('mainContentArea').style.display = 'none';
         }
 
-        // 切換後台分頁
         function switchAdminTab(tab) {
             const ordersTab = document.getElementById('ordersTab');
             const menuTab = document.getElementById('menuTab');
+            const statsTab = document.getElementById('statsTab');
             const navOrders = document.getElementById('navOrders');
             const navMenu = document.getElementById('navMenu');
+            const navStats = document.getElementById('navStats');
+
+            ordersTab.style.display = 'none';
+            menuTab.style.display = 'none';
+            statsTab.style.display = 'none';
+            navOrders.classList.remove('active');
+            navMenu.classList.remove('active');
+            navStats.classList.remove('active');
 
             if (tab === 'orders') {
                 ordersTab.style.display = 'block';
-                menuTab.style.display = 'none';
                 navOrders.classList.add('active');
-                navMenu.classList.remove('active');
                 loadOrdersData();
             } else if (tab === 'menu') {
-                ordersTab.style.display = 'none';
                 menuTab.style.display = 'block';
-                navOrders.classList.remove('active');
                 navMenu.classList.add('active');
                 loadMenuData();
+            } else if (tab === 'stats') {
+                statsTab.style.display = 'block';
+                navStats.classList.add('active');
+                calculateStats();
             }
+        }
+
+        function parseOrderDetails(itemsText, total) {
+            let subtotal = 0;
+            let shipping = 0;
+            let lines = itemsText.split('\n');
+            let hasSubtotalLine = false;
+
+            lines.forEach(line => {
+                if (line.includes('商品小計：')) {
+                    let match = line.match(/\$(\d+)/);
+                    if (match) {
+                        subtotal = parseInt(match[1]);
+                        hasSubtotalLine = true;
+                    }
+                }
+                if (line.includes('運費：')) {
+                    let match = line.match(/\$(\d+)/);
+                    if (match) {
+                        shipping = parseInt(match[1]);
+                    }
+                }
+            });
+
+            if (!hasSubtotalLine) {
+                subtotal = total - shipping;
+            }
+            return { subtotal, shipping };
         }
 
         // ================= 訂單管理邏輯 =================
@@ -372,60 +501,72 @@
             tbody.innerHTML = '';
             
             if (orders.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#7f8c8d;">目前尚無任何訂單</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#7f8c8d;">目前尚無任何訂單</td></tr>`;
                 return;
             }
 
-            // 新到舊排序
             let sorted = [...orders].reverse();
-
-            sorted.forEach((o, index) => {
+            sorted.forEach((o) => {
                 let statusColor = o.status === '已出貨' ? '#2ecc71' : '#e67e22';
+                let { subtotal, shipping } = parseOrderDetails(o.itemsText, o.total);
+
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><input type="checkbox" class="order-checkbox" value="${o.orderNumber}"></td>
                     <td><b>${o.orderNumber}</b><br><span style="font-size:12px; color:#7f8c8d;">${o.orderDate}</span></td>
                     <td><b>${o.name}</b> (${o.phone})<br><span style="font-size:13px;">${o.address}</span>${o.groupCode ? '<br><span style="color:#2980b9;">團代: ' + o.groupCode + '</span>' : ''}</td>
                     <td><div style="max-height:100px; overflow-y:auto; font-size:13px; line-height:1.4;">${o.itemsText.replace(/\n/g, '<br>')}</div></td>
-                    <td><b>$ <input type="number" id="total_${o.orderNumber}" value="${o.total}" style="width: 80px; font-weight:bold; color:#c0392b;"></b></td>
+                    <td><b>$${subtotal}</b></td>
+                    <td><input type="number" id="shipping_${o.orderNumber}" value="${shipping}" style="width: 70px; font-weight:bold; color:#2980b9;" oninput="recalcTotal('${o.orderNumber}', ${subtotal})"></td>
+                    <td><span id="total_display_${o.orderNumber}" style="font-weight:bold; color:#c0392b; font-size:15px;">$${o.total}</span></td>
                     <td><span style="color:${statusColor}; font-weight:bold;">${o.status}</span></td>
                     <td>
-                        <button class="btn btn-primary" style="padding: 5px 10px; font-size:12px;" onclick="updateOrderFee('${o.orderNumber}')">更新金額</button>
+                        <button class="btn btn-primary" onclick="updateOrderShippingFee('${o.orderNumber}', ${subtotal})">更新運費</button><br>
+                        <button class="btn btn-warning" onclick="printShippingSlip('${o.orderNumber}')">🖨️ 列印出貨單</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        function recalcTotal(orderNum, subtotal) {
+            let shippingInput = document.getElementById(`shipping_${orderNum}`);
+            let shipping = parseFloat(shippingInput.value) || 0;
+            let totalSpan = document.getElementById(`total_display_${orderNum}`);
+            let newTotal = subtotal + shipping;
+            totalSpan.innerText = `$${newTotal}`;
+        }
+
         function toggleSelectAll(master) {
             document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = master.checked);
         }
 
-        // 管理者修改單筆訂單運費與總金額
-        async function updateOrderFee(orderNum) {
-            let newTotalInput = document.getElementById(`total_${orderNum}`);
-            let newTotal = parseFloat(newTotalInput.value);
-            if (isNaN(newTotal) || newTotal < 0) {
-                alert("請輸入有效的金額數字！");
+        async function updateOrderShippingFee(orderNum, subtotal) {
+            let shippingInput = document.getElementById(`shipping_${orderNum}`);
+            let newShipping = parseFloat(shippingInput.value);
+            if (isNaN(newShipping) || newShipping < 0) {
+                alert("請輸入有效的運費金額！");
                 return;
             }
 
-            // 尋找原本的訂單物件，修改其金額與明細中的運費說明
             let target = cachedOrders.find(o => String(o.orderNumber) === String(orderNum));
             if (!target) return;
 
-            // 自動更新明細字串中的總金額或運費標示
-            let lines = target.itemsText.split('\n');
-            let updatedLines = lines.map(line => {
-                if (line.includes('運費：')) {
-                    // 若原本是待後台確認，更新為實際補上的差額或直接標註
-                    return `運費：已由後台調整`;
-                }
-                return line;
-            });
-            let newItemsText = updatedLines.join('\n');
+            let newTotal = subtotal + newShipping;
 
-            toggleLoading(true, "正在更新金額...");
+            let lines = target.itemsText.split('\n');
+            let newItemsTextArr = [];
+            for (let line of lines) {
+                if (line.includes('商品小計：') || line.includes('運費：')) {
+                    break;
+                }
+                newItemsTextArr.push(line);
+            }
+            newItemsTextArr.push(`商品小計：$${subtotal}`);
+            newItemsTextArr.push(`運費：$${newShipping} (後台調整)`);
+            let newItemsText = newItemsTextArr.join('\n');
+
+            toggleLoading(true, "正在更新運費與總金額...");
             try {
                 let params = new URLSearchParams({
                     action: "updateOrderShipping",
@@ -437,7 +578,7 @@
                 let res = await fetch(API_URL + "?" + params.toString());
                 let json = await res.json();
                 if (json && json.success) {
-                    alert(`訂單 ${orderNum} 金額已成功更新為 $${newTotal}！`);
+                    alert(`訂單 ${orderNum} 運費已更新，新總金額為 $${newTotal}！`);
                     loadOrdersData();
                 } else {
                     alert("更新失敗！");
@@ -448,7 +589,6 @@
             toggleLoading(false);
         }
 
-        // 批次設為已出貨
         async function batchShipOrders() {
             let checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
             if (checkedBoxes.length === 0) {
@@ -479,21 +619,124 @@
             toggleLoading(false);
         }
 
+        // ================= 獨立列印出貨單功能 =================
+        function printShippingSlip(orderNum) {
+            let o = cachedOrders.find(item => String(item.orderNumber) === String(orderNum));
+            if (!o) return;
+
+            let { subtotal, shipping } = parseOrderDetails(o.itemsText, o.total);
+            let fulfillmentType = "低溫宅配";
+            if (o.itemsText.includes("門市自取")) fulfillmentType = "門市自取 (免運費)";
+            else if (o.itemsText.includes("公司行號") || o.itemsText.includes("團購")) fulfillmentType = "團購 / 公司行號統一發貨";
+
+            // 解析品項表格內容 (品項、數量、單價、小計)
+            let lines = o.itemsText.split('\n');
+            let itemsListHtml = '';
+            lines.forEach(line => {
+                if (line.includes(' x ')) {
+                    let parts = line.split(' x ');
+                    let name = parts[0].trim();
+                    let qty = parseInt(parts[1].trim()) || 0;
+                    let unitPrice = cachedMenuMap[name] || 0; // 從菜單對照表抓取單價
+                    let itemSubtotal = unitPrice * qty;
+
+                    itemsListHtml += `
+                        <tr>
+                            <td>${name}</td>
+                            <td style="text-align:center;">${qty}</td>
+                            <td style="text-align:right;">$${unitPrice}</td>
+                            <td style="text-align:right;">$${itemSubtotal}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            if (!itemsListHtml) {
+                itemsListHtml = `<tr><td colspan="4">${o.itemsText.replace(/\n/g, '<br>')}</td></tr>`;
+            }
+
+            let printWindow = window.open('', '_blank', 'height=700,width=800');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="zh-TW">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>出貨單 - ${o.orderNumber}</title>
+                    <style>
+                        body { font-family: "Microsoft JhengHei", Arial, sans-serif; padding: 25px; color: #333; }
+                        h2 { text-align: center; margin-bottom: 5px; color: #2c3e50; }
+                        .subtitle { text-align: center; font-size: 13px; color: #666; margin-bottom: 25px; }
+                        .info-box { border: 2px solid #2c3e50; padding: 15px; margin-bottom: 20px; border-radius: 6px; background: #fafafa; }
+                        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 15px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        th, td { border: 1px solid #ccc; padding: 10px; font-size: 14px; }
+                        th { background-color: #f8f9fa; text-align: left; }
+                        .total-section { text-align: right; font-size: 15px; line-height: 1.8; border-top: 2px solid #333; padding-top: 10px; }
+                        .footer { text-align: center; margin-top: 35px; font-size: 14px; color: #555; }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>🥟 水餃專賣店 - 官方出貨/託運單</h2>
+                    <div class="subtitle">列印時間：${new Date().toLocaleString()}</div>
+                    
+                    <div class="info-box">
+                        <div class="info-row"><b>訂單編號：</b>${o.orderNumber}<span><b>訂購時間：</b>${o.orderDate}</span></div>
+                        <div class="info-row"><b>訂購人：</b>${o.name}<span><b>聯絡電話：</b>${o.phone}</span></div>
+                        <div class="info-row"><b>配送方式：</b>${fulfillmentType}</div>
+                        <div class="info-row"><b>收件地址/取貨資訊：</b>${o.address}</div>
+                        ${o.groupCode ? `<div class="info-row"><b>團購代碼：</b>${o.groupCode}</div>` : ''}
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>品項名稱</th>
+                                <th style="width: 70px; text-align:center;">數量</th>
+                                <th style="width: 90px; text-align:right;">單價</th>
+                                <th style="width: 90px; text-align:right;">小計</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsListHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="total-section">
+                        <div><b>商品小計：</b>$${subtotal}</div>
+                        <div><b>運費金額：</b>$${shipping}</div>
+                        <div style="font-size: 20px; color: #c0392b; margin-top: 5px;"><b>總金額 (含運)：</b>$${o.total}</div>
+                    </div>
+
+                    <div class="footer">
+                        <p>感謝您的訂購！祝您生意興隆、用餐愉快 🥟</p>
+                        <div class="no-print" style="margin-top: 20px;">
+                            <button onclick="window.print()" style="padding: 10px 25px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">🖨️ 立即列印出貨單</button>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
         // ================= 品項維護邏輯 =================
         async function loadMenuData() {
-            toggleLoading(true, "正在載入菜單...");
             try {
                 let res = await fetch(API_URL + "?action=getMenu");
                 let json = await res.json();
                 if (json && json.success) {
+                    cachedMenuMap = {};
+                    json.data.forEach(item => {
+                        cachedMenuMap[item.name] = item.price; // 建立單價對照表
+                    });
                     renderMenuTable(json.data);
-                } else {
-                    alert("載入菜單失敗！");
                 }
             } catch (err) {
-                alert("連線錯誤！");
+                console.log("載入菜單失敗");
             }
-            toggleLoading(false);
         }
 
         function renderMenuTable(menu) {
@@ -560,6 +803,120 @@
                 alert("連線錯誤！");
             }
             toggleLoading(false);
+        }
+
+        // ================= 統計分析邏輯 =================
+        function formatDate(d) {
+            let year = d.getFullYear();
+            let month = String(d.getMonth() + 1).padStart(2, '0');
+            let day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function setDateRange(type) {
+            let now = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            if (type === 'thisWeek') {
+                let day = now.getDay();
+                let diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                start.setDate(diff);
+            } else if (type === 'thisMonth') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (type === 'last3Months') {
+                start = new Date();
+                start.setMonth(now.getMonth() - 3);
+            } else if (type === 'all') {
+                start = new Date(2025, 0, 1);
+                end = new Date(2035, 11, 31);
+            }
+
+            document.getElementById('startDate').value = formatDate(start);
+            document.getElementById('endDate').value = formatDate(end);
+            
+            calculateStats();
+        }
+
+        function parseDate(dateStr) {
+            let d = new Date(dateStr);
+            if (!isNaN(d.getTime())) return d;
+            let clean = dateStr.replace(/[上下]午/g, '').trim();
+            d = new Date(clean);
+            if (!isNaN(d.getTime())) return d;
+            return new Date(0);
+        }
+
+        function calculateStats() {
+            let startVal = document.getElementById('startDate').value;
+            let endVal = document.getElementById('endDate').value;
+
+            let startDate = startVal ? new Date(startVal) : new Date(2025, 0, 1);
+            startDate.setHours(0, 0, 0, 0);
+
+            let endDate = endVal ? new Date(endVal) : new Date(2035, 11, 31);
+            endDate.setHours(23, 59, 59, 999);
+
+            let filtered = cachedOrders.filter(o => {
+                let d = parseDate(o.orderDate);
+                return d >= startDate && d <= endDate;
+            });
+
+            let totalRevenue = 0;
+            let itemCounts = {};
+
+            filtered.forEach(o => {
+                totalRevenue += (parseFloat(o.total) || 0);
+
+                let lines = o.itemsText.split('\n');
+                lines.forEach(line => {
+                    if (line.includes(' x ')) {
+                        let parts = line.split(' x ');
+                        let itemName = parts[0].trim();
+                        let qty = parseInt(parts[1]) || 0;
+                        if (itemName && qty > 0) {
+                            itemCounts[itemName] = (itemCounts[itemName] || 0) + qty;
+                        }
+                    }
+                });
+            });
+
+            document.getElementById('statTotalRevenue').innerText = `$${totalRevenue.toLocaleString()}`;
+            document.getElementById('statTotalOrders').innerText = `${filtered.length} 筆`;
+
+            let itemBody = document.getElementById('itemStatsTableBody');
+            itemBody.innerHTML = '';
+            let sortedItems = Object.keys(itemCounts).sort((a, b) => itemCounts[b] - itemCounts[a]);
+
+            if (sortedItems.length === 0) {
+                itemBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#7f8c8d;">此區間無銷售品項紀錄</td></tr>`;
+            } else {
+                sortedItems.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${item}</td><td><b>${itemCounts[item]}</b> 份/盒</td>`;
+                    itemBody.appendChild(tr);
+                });
+            }
+
+            let statsOrdersBody = document.getElementById('statsOrdersTableBody');
+            statsOrdersBody.innerHTML = '';
+            if (filtered.length === 0) {
+                statsOrdersBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#7f8c8d;">此區間無訂單紀錄</td></tr>`;
+            } else {
+                let sortedFiltered = [...filtered].reverse();
+                sortedFiltered.forEach(o => {
+                    let statusColor = o.status === '已出貨' ? '#2ecc71' : '#e67e22';
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><b>${o.orderNumber}</b><br><span style="font-size:12px; color:#7f8c8d;">${o.orderDate}</span></td>
+                        <td><b>${o.name}</b><br>${o.phone}</td>
+                        <td><div style="max-height:80px; overflow-y:auto; font-size:13px;">${o.itemsText.replace(/\n/g, '<br>')}</div></td>
+                        <td><b>$${o.total}</b></td>
+                        <td><span style="color:${statusColor}; font-weight:bold;">${o.status}</span></td>
+                    `;
+                    statsOrdersBody.appendChild(tr);
+                });
+            }
         }
     </script>
 </body>
