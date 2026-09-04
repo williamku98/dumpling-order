@@ -141,12 +141,12 @@
             background-color: #f8f9fa;
         }
         .btn {
-            padding: 8px 15px;
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 3px;
         }
         .btn-primary { background-color: #3498db; color: white; }
@@ -160,7 +160,7 @@
         .btn-warning { background-color: #e67e22; color: white; }
         .btn-warning:hover { background-color: #d35400; }
 
-        input[type="text"], input[type="number"], input[type="date"] {
+        input[type="text"], input[type="number"], input[type="date"], select {
             padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -254,11 +254,26 @@
         <!-- 區塊 1: 訂單管理 -->
         <div class="card" id="ordersTab">
             <h2>📦 客戶訂單管理</h2>
-            <p style="color: #7f8c8d; font-size: 14px;">💡 可在此檢視訂單、調整運費、列印出貨單（包含品項、數量、單價、小計），以及批次更新出貨狀態。</p>
-            <div style="margin-bottom: 15px;">
-                <button class="btn btn-success" onclick="batchShipOrders()">☑️ 將勾選的訂單設為「已出貨」</button>
-                <button class="btn btn-primary" onclick="loadOrdersData()" style="margin-left: 10px;">🔄 重新整理訂單</button>
+            <p style="color: #7f8c8d; font-size: 14px;">💡 支援狀態篩選、調整運費、列印出貨單、批次/單筆出貨與取消訂單（取消後僅註記不刪除）。</p>
+            
+            <!-- 操作按鈕與狀態篩選列 -->
+            <div style="background: #fdfbf7; border: 1px solid #e0dcd3; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <button class="btn btn-success" onclick="batchUpdateStatus('已出貨')">☑️ 勾選設為「已出貨」</button>
+                    <button class="btn btn-danger" onclick="batchUpdateStatus('已取消')">❌ 勾選設為「已取消」</button>
+                    <button class="btn btn-primary" onclick="loadOrdersData()">🔄 重新整理</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="statusFilter" style="font-weight: bold; font-size: 14px;">狀態篩選：</label>
+                    <select id="statusFilter" onchange="filterAndRenderOrders()">
+                        <option value="ALL">所有訂單</option>
+                        <option value="待出貨" selected>待出貨</option>
+                        <option value="已出貨">已出貨</option>
+                        <option value="已取消">已取消</option>
+                    </select>
+                </div>
             </div>
+
             <div style="overflow-x: auto;">
                 <table id="ordersTable">
                     <thead>
@@ -373,7 +388,7 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxmGo-q5ar3XtL3jujB9Qb1SAI7KipRctu_xBloQt0jy2lt-Kus4VvceKtLwleYS4am/exec";
         let cachedOrders = [];
-        let cachedMenuMap = {}; // 記錄品項單價對照表，供出貨單計算單價用
+        let cachedMenuMap = {};
 
         function toggleLoading(show, text="處理中...") {
             const overlay = document.getElementById('loadingOverlay');
@@ -400,7 +415,7 @@
                     document.getElementById('sidebarNav').style.display = 'flex';
                     document.getElementById('mainContentArea').style.display = 'block';
                     
-                    await loadMenuData(); // 先載入菜單建立單價對照表
+                    await loadMenuData();
                     loadOrdersData().then(() => {
                         setDateRange('thisMonth');
                     });
@@ -478,7 +493,7 @@
             return { subtotal, shipping };
         }
 
-        // ================= 訂單管理邏輯 =================
+        // ================= 訂單管理與篩選邏輯 =================
         async function loadOrdersData() {
             toggleLoading(true, "正在載入訂單...");
             try {
@@ -486,7 +501,7 @@
                 let json = await res.json();
                 if (json && json.success) {
                     cachedOrders = json.data;
-                    renderOrdersTable(cachedOrders);
+                    filterAndRenderOrders();
                 } else {
                     alert("載入訂單失敗！");
                 }
@@ -496,18 +511,32 @@
             toggleLoading(false);
         }
 
+        function filterAndRenderOrders() {
+            const filterValue = document.getElementById('statusFilter').value;
+            let filtered = cachedOrders;
+
+            if (filterValue !== 'ALL') {
+                filtered = cachedOrders.filter(o => o.status === filterValue);
+            }
+
+            renderOrdersTable(filtered);
+        }
+
         function renderOrdersTable(orders) {
             const tbody = document.getElementById('ordersTableBody');
             tbody.innerHTML = '';
             
             if (orders.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#7f8c8d;">目前尚無任何訂單</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#7f8c8d;">目前尚無符合條件的訂單</td></tr>`;
                 return;
             }
 
             let sorted = [...orders].reverse();
             sorted.forEach((o) => {
-                let statusColor = o.status === '已出貨' ? '#2ecc71' : '#e67e22';
+                let statusColor = '#e67e22'; // 待出貨
+                if (o.status === '已出貨') statusColor = '#2ecc71';
+                else if (o.status === '已取消') statusColor = '#e74c3c';
+
                 let { subtotal, shipping } = parseOrderDetails(o.itemsText, o.total);
 
                 let tr = document.createElement('tr');
@@ -521,8 +550,9 @@
                     <td><span id="total_display_${o.orderNumber}" style="font-weight:bold; color:#c0392b; font-size:15px;">$${o.total}</span></td>
                     <td><span style="color:${statusColor}; font-weight:bold;">${o.status}</span></td>
                     <td>
-                        <button class="btn btn-primary" onclick="updateOrderShippingFee('${o.orderNumber}', ${subtotal})">更新運費</button><br>
-                        <button class="btn btn-warning" onclick="printShippingSlip('${o.orderNumber}')">🖨️ 列印出貨單</button>
+                        <button class="btn btn-primary" onclick="updateOrderShippingFee('${o.orderNumber}', ${subtotal})">更新運費</button>
+                        <button class="btn btn-warning" onclick="printShippingSlip('${o.orderNumber}')">🖨️ 列印</button>
+                        <button class="btn btn-danger" onclick="updateSingleStatus('${o.orderNumber}', '已取消')">取消訂單</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -589,26 +619,53 @@
             toggleLoading(false);
         }
 
-        async function batchShipOrders() {
+        // 批次更新狀態（如「已出貨」或「已取消」）
+        async function batchUpdateStatus(targetStatus) {
             let checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
             if (checkedBoxes.length === 0) {
-                alert("請至少勾選一筆要出貨的訂單！");
+                alert("請至少勾選一筆訂單！");
                 return;
             }
 
             let orderNums = Array.from(checkedBoxes).map(cb => cb.value);
-            if (!confirm(`確定要將選取的 ${orderNums.length} 筆訂單狀態改為「已出貨」嗎？`)) return;
+            if (!confirm(`確定要將選取的 ${orderNums.length} 筆訂單狀態改為「${targetStatus}」嗎？`)) return;
 
-            toggleLoading(true, "正在更新出貨狀態...");
+            toggleLoading(true, `正在更新訂單狀態為 ${targetStatus}...`);
             try {
                 let params = new URLSearchParams({
                     action: "updateOrderStatus",
-                    orderNumbers: JSON.stringify(orderNums)
+                    orderNumbers: JSON.stringify(orderNums),
+                    status: targetStatus
                 });
                 let res = await fetch(API_URL + "?" + params.toString());
                 let json = await res.json();
                 if (json && json.success) {
                     alert("狀態更新成功！");
+                    loadOrdersData();
+                } else {
+                    alert("更新失敗！");
+                }
+            } catch (err) {
+                alert("連線錯誤！");
+            }
+            toggleLoading(false);
+        }
+
+        // 單筆直接更新狀態（如取消訂單）
+        async function updateSingleStatus(orderNum, targetStatus) {
+            if (!confirm(`確定要將訂單 ${orderNum} 標記為「${targetStatus}」嗎？`)) return;
+
+            toggleLoading(true, "處理中...");
+            try {
+                let params = new URLSearchParams({
+                    action: "updateOrderStatus",
+                    orderNumbers: JSON.stringify([orderNum]),
+                    status: targetStatus
+                });
+                let res = await fetch(API_URL + "?" + params.toString());
+                let json = await res.json();
+                if (json && json.success) {
+                    alert(`訂單已更新為「${targetStatus}」！`);
                     loadOrdersData();
                 } else {
                     alert("更新失敗！");
@@ -629,7 +686,6 @@
             if (o.itemsText.includes("門市自取")) fulfillmentType = "門市自取 (免運費)";
             else if (o.itemsText.includes("公司行號") || o.itemsText.includes("團購")) fulfillmentType = "團購 / 公司行號統一發貨";
 
-            // 解析品項表格內容 (品項、數量、單價、小計)
             let lines = o.itemsText.split('\n');
             let itemsListHtml = '';
             lines.forEach(line => {
@@ -637,7 +693,7 @@
                     let parts = line.split(' x ');
                     let name = parts[0].trim();
                     let qty = parseInt(parts[1].trim()) || 0;
-                    let unitPrice = cachedMenuMap[name] || 0; // 從菜單對照表抓取單價
+                    let unitPrice = cachedMenuMap[name] || 0;
                     let itemSubtotal = unitPrice * qty;
 
                     itemsListHtml += `
@@ -673,9 +729,7 @@
                         th { background-color: #f8f9fa; text-align: left; }
                         .total-section { text-align: right; font-size: 15px; line-height: 1.8; border-top: 2px solid #333; padding-top: 10px; }
                         .footer { text-align: center; margin-top: 35px; font-size: 14px; color: #555; }
-                        @media print {
-                            .no-print { display: none; }
-                        }
+                        @media print { .no-print { display: none; } }
                     </style>
                 </head>
                 <body>
@@ -730,7 +784,7 @@
                 if (json && json.success) {
                     cachedMenuMap = {};
                     json.data.forEach(item => {
-                        cachedMenuMap[item.name] = item.price; // 建立單價對照表
+                        cachedMenuMap[item.name] = item.price;
                     });
                     renderMenuTable(json.data);
                 }
@@ -748,7 +802,7 @@
                 tr.innerHTML = `
                     <td><input type="text" class="menu-name" value="${item.name}" style="width: 90%;"></td>
                     <td><input type="number" class="menu-price" value="${item.price}" style="width: 100px;"></td>
-                    <td><button class="btn btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="this.closest('tr').remove()">刪除</button></td>
+                    <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">刪除</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -760,7 +814,7 @@
             tr.innerHTML = `
                 <td><input type="text" class="menu-name" placeholder="請輸入新品項名稱" style="width: 90%;"></td>
                 <td><input type="number" class="menu-price" value="100" style="width: 100px;"></td>
-                <td><button class="btn btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="this.closest('tr').remove()">刪除</button></td>
+                <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">刪除</button></td>
             `;
             tbody.appendChild(tr);
         }
@@ -866,6 +920,9 @@
             let itemCounts = {};
 
             filtered.forEach(o => {
+                // 已取消的訂單不計入銷售總額與統計
+                if (o.status === '已取消') return;
+
                 totalRevenue += (parseFloat(o.total) || 0);
 
                 let lines = o.itemsText.split('\n');
@@ -882,14 +939,14 @@
             });
 
             document.getElementById('statTotalRevenue').innerText = `$${totalRevenue.toLocaleString()}`;
-            document.getElementById('statTotalOrders').innerText = `${filtered.length} 筆`;
+            document.getElementById('statTotalOrders').innerText = `${filtered.filter(o => o.status !== '已取消').length} 筆 (有效)`;
 
             let itemBody = document.getElementById('itemStatsTableBody');
             itemBody.innerHTML = '';
             let sortedItems = Object.keys(itemCounts).sort((a, b) => itemCounts[b] - itemCounts[a]);
 
             if (sortedItems.length === 0) {
-                itemBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#7f8c8d;">此區間無銷售品項紀錄</td></tr>`;
+                itemBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#7f8c8d;">此區間無有效銷售品項紀錄</td></tr>`;
             } else {
                 sortedItems.forEach(item => {
                     let tr = document.createElement('tr');
@@ -905,7 +962,10 @@
             } else {
                 let sortedFiltered = [...filtered].reverse();
                 sortedFiltered.forEach(o => {
-                    let statusColor = o.status === '已出貨' ? '#2ecc71' : '#e67e22';
+                    let statusColor = '#e67e22';
+                    if (o.status === '已出貨') statusColor = '#2ecc71';
+                    else if (o.status === '已取消') statusColor = '#e74c3c';
+
                     let tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><b>${o.orderNumber}</b><br><span style="font-size:12px; color:#7f8c8d;">${o.orderDate}</span></td>
