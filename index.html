@@ -12,7 +12,6 @@
             height: 100vh;
             background-color: #f4f7f6;
         }
-        /* 載入中遮罩 */
         #loadingOverlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -26,7 +25,6 @@
             font-weight: bold;
             color: #2c3e50;
         }
-        /* 左側選單列樣式 */
         .sidebar {
             width: 250px;
             background-color: #2c3e50;
@@ -34,11 +32,17 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            flex-shrink: 0;
         }
         .sidebar h2 {
             text-align: center;
             margin-bottom: 30px;
             font-size: 20px;
+        }
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
         }
         .sidebar a {
             color: white;
@@ -53,8 +57,6 @@
             background-color: #34495e;
             border-left: 4px solid #3498db;
         }
-        
-        /* 右側主要內容區塊 */
         .main-content {
             flex: 1;
             padding: 30px;
@@ -109,7 +111,8 @@
             font-weight: bold;
         }
         .form-group input[type="text"], 
-        .form-group input[type="tel"] {
+        .form-group input[type="tel"],
+        .form-group select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
@@ -117,9 +120,12 @@
             box-sizing: border-box;
             font-size: 15px;
         }
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
         .radio-group label {
-            display: inline-block;
-            margin-right: 20px;
             font-weight: normal;
             cursor: pointer;
         }
@@ -152,27 +158,70 @@
             margin-bottom: 15px;
             line-height: 1.6;
         }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 15px;
+                box-sizing: border-box;
+            }
+            .sidebar h2 {
+                margin: 0;
+                font-size: 16px;
+            }
+            .nav-links {
+                flex-direction: row;
+                width: auto;
+            }
+            .sidebar a {
+                padding: 8px 12px;
+                font-size: 14px;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+            }
+            .sidebar a.active {
+                border-bottom: 3px solid #3498db;
+            }
+            .main-content {
+                padding: 15px;
+            }
+            .card {
+                padding: 15px;
+            }
+            th, td {
+                padding: 8px 6px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <!-- 載入中遮罩 -->
     <div id="loadingOverlay">
         <div style="font-size: 35px; margin-bottom: 15px;">🥟</div>
         <div id="loadingText">處理中，請稍候...</div>
     </div>
 
-    <!-- 左側選單 -->
     <div class="sidebar">
         <h2>水餃訂購系統</h2>
-        <a id="navOrder" class="active" onclick="switchView('order')">1. 線上訂購</a>
-        <a id="navQuery" onclick="switchView('query')">🔍 查詢訂單狀態</a>
+        <div class="nav-links">
+            <a id="navOrder" class="active" onclick="switchView('order')">線上訂購</a>
+            <a id="navQuery" onclick="switchView('query')">查詢訂單</a>
+        </div>
     </div>
 
-    <!-- 內容區 -->
     <div class="main-content">
         
-        <!-- ================= 區塊 1: 訂購表單 ================= -->
+        <!-- 訂購表單 -->
         <div class="card" id="orderSection">
             <h2>🛒 訂購表單</h2>
             <form id="orderForm">
@@ -185,9 +234,7 @@
                             <th>小計</th>
                         </tr>
                     </thead>
-                    <tbody id="menuBody">
-                        <!-- 動態生成 -->
-                    </tbody>
+                    <tbody id="menuBody"></tbody>
                     <tfoot>
                         <tr>
                             <td colspan="3" style="text-align: right; font-weight: bold;">商品小計 :</td>
@@ -204,7 +251,7 @@
                     </tfoot>
                 </table>
 
-                <!-- 取貨與配送方式區塊 -->
+                <!-- 取貨與配送方式 (具備欄位聯動) -->
                 <div class="customer-info">
                     <h3>🚚 取貨與配送方式</h3>
                     <div class="form-group radio-group">
@@ -212,14 +259,15 @@
                             <input type="radio" name="fulfillment" value="自取" onclick="updateFulfillment()"> 門市自取 (免運費)
                         </label>
                         <label>
-                            <input type="radio" name="fulfillment" value="宅配" checked onclick="updateFulfillment()"> 低溫宅配 (預設 61~90cm $225)
+                            <input type="radio" name="fulfillment" value="宅配" checked onclick="updateFulfillment()"> 低溫宅配 ($225)
                         </label>
-                    </div>
-                    <div id="shippingNotice" style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
-                        💡 宅配運費依包裹尺寸計算（預設帶入 225 元），後續若尺寸有異動，管理者可在後台確認並更新金額。
+                        <label>
+                            <input type="radio" name="fulfillment" value="團購/公司行號發貨" onclick="updateFulfillment()"> 團購 / 公司行號統一發貨 (如 ELC 等，運費後續確認)
+                        </label>
                     </div>
                 </div>
 
+                <!-- 訂購人與動態欄位 -->
                 <div class="customer-info">
                     <h3>📝 訂購人資訊</h3>
                     <div class="form-group">
@@ -234,9 +282,14 @@
                         <label for="customerPhone">聯絡電話</label>
                         <input type="tel" id="customerPhone" required placeholder="請輸入電話 (例如: 0912345678)">
                     </div>
-                    <div class="form-group">
-                        <label for="customerAddress">配送地址 (若是自取請填「自取」)</label>
-                        <input type="text" id="customerAddress" required placeholder="請輸入完整地址或填寫自取">
+
+                    <!-- 欄位聯動區塊：根據取貨方式動態切換 -->
+                    <div class="form-group" id="dynamicFieldContainer">
+                        <label id="dynamicLabel" for="customerAddress">收件地址</label>
+                        <input type="text" id="customerAddress" required placeholder="請輸入完整收件地址">
+                        <div id="dynamicHint" style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
+                            💡 宅配運費預設帶入 225 元，後續若尺寸有異動可在後台更新。
+                        </div>
                     </div>
                 </div>
 
@@ -244,7 +297,7 @@
             </form>
         </div>
 
-        <!-- ================= 區塊 2: 查詢訂單 ================= -->
+        <!-- 查詢訂單 -->
         <div class="card" id="querySection" style="display: none;">
             <h2>🔍 查詢我的訂單</h2>
             <p style="color: #7f8c8d; font-size: 15px; margin-bottom: 20px;">💡 請輸入「訂單編號」或「聯絡電話」 (擇一輸入即可查詢)</p>
@@ -275,7 +328,7 @@
             { name: "豬肉小餛飩 (15顆/盒)", price: 50 }
         ];
 
-        let currentShippingFee = 225; // 預設宅配運費
+        let currentShippingFee = 225;
 
         function toggleLoading(show, text="處理中...") {
             const overlay = document.getElementById('loadingOverlay');
@@ -336,19 +389,35 @@
             });
         }
 
-        // 切換取貨方式計算運費
+        // 欄位聯動邏輯：根據配送方式切換介面
         function updateFulfillment() {
             const fulfillmentType = document.querySelector('input[name="fulfillment"]:checked').value;
-            const shippingNotice = document.getElementById('shippingNotice');
+            const dynamicLabel = document.getElementById('dynamicLabel');
+            const customerAddress = document.getElementById('customerAddress');
+            const dynamicHint = document.getElementById('dynamicHint');
             
             if (fulfillmentType === '自取') {
                 currentShippingFee = 0;
-                shippingNotice.innerText = "💡 選擇門市自取，免收運費。";
-            } else {
+                dynamicLabel.innerText = "取貨門市 / 時段說明";
+                customerAddress.value = "門市自取";
+                customerAddress.readOnly = true; // 鎖定不需手動填寫地址
+                dynamicHint.innerHTML = "💡 選擇門市自取免運費。將於約定時間由您親自至門市取貨。";
+            } else if (fulfillmentType === '宅配') {
                 currentShippingFee = 225;
-                shippingNotice.innerText = "💡 宅配運費依包裹尺寸計算（預設帶入 225 元），後續若尺寸有異動，管理者可在後台確認並更新金額。";
+                dynamicLabel.innerText = "收件地址";
+                customerAddress.value = "";
+                customerAddress.readOnly = false;
+                customerAddress.placeholder = "請輸入完整收件地址";
+                dynamicHint.innerHTML = "💡 低溫宅配運費預設 225 元，後續若尺寸有異動可在後台更新。";
+            } else if (fulfillmentType === '團購/公司行號發貨') {
+                currentShippingFee = 0;
+                dynamicLabel.innerText = "公司名稱 / 部門 / 收件備註";
+                customerAddress.value = "";
+                customerAddress.readOnly = false;
+                customerAddress.placeholder = "例如: 長榮物流 ELC 辦公室";
+                dynamicHint.innerHTML = "💡 選擇公司統一發貨，運費將依實際配送狀況（如 Uber 等）計算，由管理者於後台確認並更新。";
             }
-            document.getElementById('shippingFeeDisplay').innerText = `$${currentShippingFee}`;
+            document.getElementById('shippingFeeDisplay').innerText = fulfillmentType === '團購/公司行號發貨' ? `$0 (後續確認)` : `$${currentShippingFee}`;
             updateGrandTotal();
         }
 
@@ -360,10 +429,10 @@
                 itemsSubtotal += (price * qty);
             });
             
-            let grandTotal = itemsSubtotal + currentShippingFee;
+            const fulfillmentType = document.querySelector('input[name="fulfillment"]:checked').value;
+            let grandTotal = itemsSubtotal + (fulfillmentType === '團購/公司行號發貨' ? 0 : currentShippingFee);
             
             document.getElementById('itemsSubtotal').innerText = `$${itemsSubtotal}`;
-            document.getElementById('shippingFeeDisplay').innerText = `$${currentShippingFee}`;
             document.getElementById('grandTotal').innerText = grandTotal;
         }
 
@@ -414,8 +483,20 @@
             const fulfillmentType = document.querySelector('input[name="fulfillment"]:checked').value;
             let itemsTextArr = [];
             
-            // 將配送方式與運費包裝進訂單內容字串中
-            itemsTextArr.push(`【配送方式】${fulfillmentType === '自取' ? '門市自取 (免運費)' : '低溫宅配'}`);
+            let fulfillmentDesc = '';
+            let recordedShipping = currentShippingFee;
+            if (fulfillmentType === '自取') {
+                fulfillmentDesc = '門市自取 (免運費)';
+                recordedShipping = 0;
+            } else if (fulfillmentType === '宅配') {
+                fulfillmentDesc = `低溫宅配 ($${currentShippingFee})`;
+                recordedShipping = currentShippingFee;
+            } else {
+                fulfillmentDesc = '團購 / 公司行號統一發貨 (運費待後台確認)';
+                recordedShipping = 0;
+            }
+
+            itemsTextArr.push(`【配送方式】${fulfillmentDesc}`);
             itemsTextArr.push(`------------------`);
             
             document.querySelectorAll('.qty-input').forEach(input => {
@@ -427,7 +508,7 @@
             
             itemsTextArr.push(`------------------`);
             itemsTextArr.push(`商品小計：$${itemsSubtotal}`);
-            itemsTextArr.push(`運費：$${currentShippingFee}`);
+            itemsTextArr.push(`運費：${fulfillmentType === '團購/公司行號發貨' ? '待管理者確認' : '$' + recordedShipping}`);
 
             const orderNum = generateOrderNumber();
             const orderDate = new Date().toLocaleString();
@@ -436,7 +517,7 @@
             const address = document.getElementById('customerAddress').value.trim();
             const groupCode = document.getElementById('groupCode').value.trim();
             const itemsText = itemsTextArr.join(' \n ');
-            const totalAmount = itemsSubtotal + currentShippingFee;
+            const totalAmount = itemsSubtotal + recordedShipping;
 
             const params = new URLSearchParams({
                 action: "addOrder",
@@ -460,33 +541,30 @@
                 try {
                     json = JSON.parse(rawText);
                 } catch (parseErr) {
-                    console.error("非 JSON 回應：", rawText);
-                    alert("伺服器回應格式錯誤！請確認 Apps Script 權限是否已授權完畢。");
+                    alert("伺服器回應格式錯誤！請確認 Apps Script 權限。");
                     toggleLoading(false);
                     return;
                 }
                 
                 if (json && json.success) {
-                    let successMsg = `訂單送出成功！\n您的訂單編號為：${orderNum}\n商品小計：$${itemsSubtotal}\n運費：$${currentShippingFee}\n總金額：$${totalAmount}`;
+                    let successMsg = `訂單送出成功！\n您的訂單編號為：${orderNum}\n商品小計：$${itemsSubtotal}\n運費：${fulfillmentType === '團購/公司行號發貨' ? '待管理者確認' : '$' + recordedShipping}\n總金額：$${totalAmount}`;
                     if (groupCode) successMsg += `\n團購代碼：${groupCode}`;
                     alert(successMsg);
                     
                     document.getElementById('orderForm').reset();
-                    // 重置預設為宅配
                     document.querySelector('input[name="fulfillment"][value="宅配"]').checked = true;
                     updateFulfillment();
                 } else {
                     alert("系統發生錯誤：" + (json.error || "未知錯誤"));
                 }
             } catch (err) {
-                console.error("連線錯誤：", err);
                 alert("網路連線錯誤，請重試！");
             }
 
             toggleLoading(false);
         });
 
-        // 查詢訂單
+        // 查詢訂單 (加強取貨細節與核對呈現)
         async function doQuery() {
             const num = document.getElementById('qOrderNum').value.trim();
             const phoneInput = document.getElementById('qPhone').value.trim();
@@ -533,15 +611,17 @@
                                     <div style="font-size:14px; line-height:1.6; margin-bottom:10px;">
                                         <b>訂購人：</b>${targetOrder.name}<br>
                                         <b>聯絡電話：</b>${targetOrder.phone}<br>
-                                        <b>配送地址：</b>${targetOrder.address}
+                                        <b>取貨/配送資訊：</b>${targetOrder.address}
                                         ${groupCodeHtml}
                                     </div>
                                     <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-                                    <b>訂單內容：</b><br>
-                                    ${targetOrder.itemsText.replace(/\n/g, '<br>')}
+                                    <b>訂單內容與明細：</b><br>
+                                    <div style="background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #eee; margin-top: 5px;">
+                                        ${targetOrder.itemsText.replace(/\n/g, '<br>')}
+                                    </div>
                                     <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <div style="font-size:16px;"><b>總金額 (含運)：</b>$${targetOrder.total}</div>
+                                        <div style="font-size:16px;"><b>總金額：</b>$${targetOrder.total}</div>
                                         <div style="font-size:16px;">
                                             <b>狀態：</b><span style="color:${statusColor}; font-weight:bold;">${targetOrder.status}</span>
                                         </div>
